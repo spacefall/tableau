@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 Future<List<List>> getNewTimetable(String url) async {
   final htmlResponse = await http.Client()
-      .get(Uri.parse("https://corsio-test.herokuapp.com/$url"));
+      .get(Uri.parse("https://corsio-test.herokuapp.com/?$url"));
 
   if (htmlResponse.statusCode == 200) {
     final timetablehtml = parse(htmlResponse.body);
