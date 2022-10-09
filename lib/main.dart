@@ -65,7 +65,7 @@ void main() async {
 // Prepara la lista dalla tabella oraria
 Future<List<List>> prepareTT(
     PrefServiceShared service, SharedPreferences prefs) async {
-  var ttD = await readTTFromLocal(prefs);
+  final ttD = await readTTFromLocal(prefs);
 
   // Se restituisce qualsiasi cosa che non sia "nodata"
   if (ttD[0][0] != "nodata") {
@@ -73,13 +73,16 @@ Future<List<List>> prepareTT(
     if (!isDateValid(int.parse(ttD[3][2]), int.parse(ttD[3][1]))) {
       // Se no aggiorna
       String ttUrl = updateLink(ttD[3][3]);
-      ttD = await getNewTimetable(ttUrl);
+      final ttD_new = await getNewTimetable(ttUrl);
       // E se non ritorna "nodata", salvala
-      if (ttD[0][0] != "nodata") {
+      // Questo pezzo di codice ignora completamente se il nuovo link per l'orario è in esistente e quindi 404
+      // Questo if sistema temporaneamente la faccenda fino a quando non lo sistemo per ridurre le richieste al server
+      if (ttD_new[0][0] != "nodata") {
         writeTTtoLocal(ttD, prefs);
+        return ttD_new;
+      } else {
+        return ttD;
       }
-      // Restituisce la nuova tabella
-      return ttD;
     }
     // Restituisce la tabella salvata
     return ttD;
