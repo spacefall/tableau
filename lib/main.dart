@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+//import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/services.dart';
@@ -12,7 +12,7 @@ import 'local_timetable.dart';
 import 'get_new_timetable.dart';
 import 'update_link.dart';
 import 'settings.dart';
-import 'errors.dart';
+import 'others.dart';
 
 //late final SharedPreferences prefs;
 late List<List> timetableData;
@@ -73,13 +73,13 @@ Future<List<List>> prepareTT(
     if (!isDateValid(int.parse(ttD[3][2]), int.parse(ttD[3][1]))) {
       // Se no aggiorna
       String ttUrl = updateLink(ttD[3][3]);
-      final ttD_new = await getNewTimetable(ttUrl);
+      final ttDNew = await getNewTimetable(ttUrl);
       // E se non ritorna "nodata", salvala
       // Questo pezzo di codice ignora completamente se il nuovo link per l'orario è in esistente e quindi 404
       // Questo if sistema temporaneamente la faccenda fino a quando non lo sistemo per ridurre le richieste al server
-      if (ttD_new[0][0] != "nodata") {
+      if (ttDNew[0][0] != "nodata") {
         writeTTtoLocal(ttD, prefs);
-        return ttD_new;
+        return ttDNew;
       } else {
         return ttD;
       }
@@ -119,10 +119,7 @@ class Tableau extends StatelessWidget {
         darkTheme = darkDynamic.harmonized();
       } else {
         lightTheme = const ColorScheme.light();
-        darkTheme = const ColorScheme.dark(
-          background: Colors.black,
-          surface: Colors.black,
-        );
+        darkTheme = const ColorScheme.dark();
       }
 
 /*       if (UniversalPlatform.isWeb) {

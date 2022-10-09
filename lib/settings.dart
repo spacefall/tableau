@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pref/pref.dart';
 import 'package:validators/validators.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 
+import 'others.dart';
 import 'main.dart';
-import 'local_timetable.dart';
 
 class AppSettings extends StatefulWidget {
   @override
@@ -71,38 +69,11 @@ class _AppSettingsState extends State<AppSettings> {
           ),
         ),
         ListTile(
-          title: const Text("Resetta i dati e chiudi l'app"),
-          onTap: () => resetToFirstTime(),
-        ),
-        ListTile(
           title: const Text("Icona 'Orario' da Icons8"),
-          onTap: () =>
-              openWebsite("https://icons8.com/icon/Z3lbg7ZIDklH/orario"),
+          onTap: () => openWebsite(
+              "https://icons8.com/icon/Z3lbg7ZIDklH/orario", context),
         )
       ]),
     );
-  }
-
-  // Funzione per aprire comodamente un link
-  void openWebsite(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (await Connectivity().checkConnectivity() != ConnectivityResult.none) {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication,
-        );
-      } else {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Impossibile aprire sito"),
-        ));
-      }
-    } else {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Non sei connesso ad Internet"),
-      ));
-    }
   }
 }

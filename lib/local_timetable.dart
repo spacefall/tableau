@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Legge la Tabella oraria salvata da SharedPreferences e la restituisce
@@ -50,11 +49,4 @@ void writeTTtoLocal(List<List> tt, SharedPreferences prefs) async {
 
   await prefs.setStringList('ttChunk3', tt[3].cast<String>());
   await prefs.setInt('ttLength', tt[0].length);
-}
-
-// Cancella tutti i dati salvati e "chiude" l'app
-void resetToFirstTime() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.clear();
-  SystemChannels.platform.invokeMethod('SystemNavigator.pop');
 }
