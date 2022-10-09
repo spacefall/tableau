@@ -1,62 +1,21 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:pref/pref.dart';
+import 'package:tuple/tuple.dart';
+import 'package:universal_platform/universal_platform.dart';
 
 import 'local_timetable.dart';
 import 'get_new_timetable.dart';
 import 'update_link.dart';
 import 'settings.dart';
+import 'errors.dart';
 
-late final SharedPreferences prefs;
-List<List> times = [[]];
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Jiffy.locale("it");
-
-  prefs = await SharedPreferences.getInstance();
-
-  final service = await PrefServiceShared.init(
-    defaults: {
-      'timetableurl': '',
-    },
-  );
-
-  times = await readTTFromLocal(prefs);
-  if (times[0][0] == "nodata") {
-    //print("Using remote timetable, replace this with inital setup");
-    print(service.get('timetableurl'));
-    /* if (service.get('timetableurl') == "") {
-      times = await getNewTimetable(
-          );
-      writeTTtoLocal(times, prefs);
-    } */
-  } else {
-    int dateDiff =
-        checkIfInvalid(int.parse(times[3][2]), int.parse(times[3][1]));
-    if (dateDiff < 6) {
-      print("Using local timetable");
-    } else {
-      print("Getting remote Timetable");
-      String ttUrl = updateLink(times[3][3], int.parse(times[3][2]),
-          int.parse(times[3][1]), dateDiff);
-      times = await getNewTimetable(ttUrl);
-      writeTTtoLocal(times, prefs);
-    }
-  }
-  runApp(
-    PrefService(
-      service: service,
-      child: const MyApp(),
-    ),
-  );
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-    systemNavigationBarColor: Colors.black.withOpacity(0),
-  ));
-}
+//late final SharedPreferences prefs;
+late List<List> timetableData;
 
 const Color baseColor = Color.fromARGB(255, 0, 153, 47);
 const List<String> dayNames = [
@@ -68,158 +27,240 @@ const List<String> dayNames = [
   "Sabato",
 ];
 
-const String firstRun = """
-Sembra che sia la prima volta che apri questa applicazione.
+// Imposta e carica le cose cose necessarie per il funzionamento dell'app
+Future<Tuple2<PrefServiceShared, SharedPreferences>> settingSetup() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Jiffy.locale("it"); // Setta Jiffy in italiano
 
-Per iniziare vai sul sito della scuola e vai su:
-Orario delle lezioni > Orario singole classi > la tua classe.
+  // Restituisce il servizio per le impostazioni e un'instanza di SharedPreferences
+  return Tuple2<PrefServiceShared, SharedPreferences>(
+      await PrefServiceShared.init(
+        defaults: {
+          'timetableurl': null,
+        },
+      ),
+      await SharedPreferences.getInstance());
+}
 
-Copia il link ed incollalo in:
-Impostazioni (l'ingranaggio in alto a sinistra) > Link orario scuola.
-""";
+void main() async {
+  final setup = await settingSetup();
+  timetableData = await prepareTT(setup.item1, setup.item2);
+  runApp(
+    PrefService(
+      service: setup.item1,
+      child: const Tableau(),
+    ),
+  );
 
+  // Probabilmente l'if non è necessario ma lo tengo comunque
+  if (UniversalPlatform.isAndroid) {
+    // Forza il colore della navbar a trasparente
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      systemNavigationBarColor: Colors.transparent, //black.withOpacity(0),
+    ));
+  }
+}
+
+// Prepara la lista dalla tabella oraria
+Future<List<List>> prepareTT(
+    PrefServiceShared service, SharedPreferences prefs) async {
+  var ttD = await readTTFromLocal(prefs);
+
+  // Se restituisce qualsiasi cosa che non sia "nodata"
+  if (ttD[0][0] != "nodata") {
+    // Check per vedere che la data sia aggiornata
+    if (!isDateValid(int.parse(ttD[3][2]), int.parse(ttD[3][1]))) {
+      // Se no aggiorna
+      String ttUrl = updateLink(ttD[3][3]);
+      ttD = await getNewTimetable(ttUrl);
+      // E se non ritorna "nodata", salvala
+      if (ttD[0][0] != "nodata") {
+        writeTTtoLocal(ttD, prefs);
+      }
+      // Restituisce la nuova tabella
+      return ttD;
+    }
+    // Restituisce la tabella salvata
+    return ttD;
+  }
+  // Se non viene restituito niente, fai come se fosse la prima volta (spesso lo è)
+  return [
+    ["nodata", "firsttime"],
+  ];
+}
+
+// Usato per ricaricare la tabella oraria dopo averla impostata nelle impostazioni
 void refreshTimetableData(String url) async {
-  times = await getNewTimetable(url);
-  writeTTtoLocal(times, prefs);
+  timetableData = await getNewTimetable(url);
+  if (timetableData[0][0] != "nodata") {
+    writeTTtoLocal(timetableData, await SharedPreferences.getInstance());
+  }
 }
 
-void delTimetableData() async {
-  await prefs.clear();
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class Tableau extends StatelessWidget {
+  const Tableau({super.key});
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    // Carica i colori del tema dinamico
     return DynamicColorBuilder(
         builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
       ColorScheme darkTheme;
       ColorScheme lightTheme;
 
+      // Se non è supportato crea un tema usando bianco e nero
       if (lightDynamic != null && darkDynamic != null) {
         lightTheme = lightDynamic.harmonized();
         darkTheme = darkDynamic.harmonized();
       } else {
-        lightTheme = ColorScheme.fromSeed(seedColor: baseColor);
-        darkTheme = ColorScheme.fromSeed(
-            seedColor: baseColor, brightness: Brightness.dark);
+        lightTheme = const ColorScheme.light();
+        darkTheme = const ColorScheme.dark(
+          background: Colors.black,
+          surface: Colors.black,
+        );
       }
 
+/*       if (UniversalPlatform.isWeb) {
+        return const CupertinoApp(
+          title: 'Tableau',
+          home: TableauMain(title: 'Tableau'),
+          localizationsDelegates: <LocalizationsDelegate<dynamic>>[
+            DefaultMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+            DefaultCupertinoLocalizations.delegate,
+          ],
+        );
+      } else { */
       return MaterialApp(
         title: 'Tableau',
         theme: ThemeData(
           colorScheme: lightTheme,
-          scaffoldBackgroundColor: lightTheme.background,
+          scaffoldBackgroundColor: lightTheme
+              .background, // dynamic_colors non imposta il colore per gli scaffold e quindi lo "forzo" qui
           useMaterial3: true,
         ),
         darkTheme: ThemeData(
           colorScheme: darkTheme,
-          scaffoldBackgroundColor: darkTheme.background,
+          scaffoldBackgroundColor: darkTheme.background, // e qui
           useMaterial3: true,
         ),
         themeMode: ThemeMode.system,
-        home: const MyHomePage(title: 'Tableau'),
+        home: const TableauMain(title: 'Tableau'),
       );
+      //}
     });
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+class TableauMain extends StatefulWidget {
+  const TableauMain({super.key, required this.title});
 
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<TableauMain> createState() => _TableauMainState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _TableauMainState extends State<TableauMain> {
   @override
   Widget build(BuildContext context) {
+    // AppBar inizializata qui per evitare di tenere questo blocco di codice per entrambe le situazioni sotto
     AppBar bartender = AppBar(
       title: Text(widget.title),
       actions: [
         IconButton(
           icon: const Icon(Icons.settings),
           tooltip: "Impostazioni",
+          // Magico blocco di codice che scarica la pagina quando si passa alle impostazioni così almeno funzionano
+          // Non capisco bene come funziona però funziona
           onPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => AppSettings()),
             ).then((value) => setState(() {}));
-/*             Navigator.of(context).push(MaterialPageRoute(
-              builder: (context) => AppSettings(),
-            )); */
           },
         ),
       ],
     );
 
-    if (times[0][0] != "nodata") {
+    // La lista di liste di liste
+    if (timetableData[0][0] != "nodata") {
+      final currentDayOfWeek = Jiffy().day -
+          1; // Il -1 è necessario dato che Jiffy parte da 1 e le liste da 0
+      final hoursADay = timetableData[0].length - 1;
       return Scaffold(
         appBar: bartender,
         body: ListView(
+          // Se physics non è specificato anche quando non serve scrollare la pagina può essere scrollata
           physics: const ScrollPhysics(),
           children: [
+            // L'ultima lista creata ovvero la prima che si vede
             ListView.builder(
-              scrollDirection: Axis.vertical,
+              //scrollDirection: Axis.vertical,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: dayNames.length,
               itemBuilder: (context, indice) {
+                // Espande la lista se il giorno corrispone ad oggi
                 return ExpansionTile(
-                  initiallyExpanded: (dayNames[indice].toLowerCase() ==
-                      Jiffy().format("EEEE")),
+                  //initiallyExpanded: (dayNames[indice].toLowerCase() ==
+                  //    Jiffy().format("EEEE")),
+                  initiallyExpanded: (indice == currentDayOfWeek),
                   title: Text(dayNames[indice]),
                   children: [
+                    // La seconda lista
                     ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        scrollDirection: Axis.vertical,
-                        itemCount: times[0].length - 1,
+                        //scrollDirection: Axis.vertical,
+                        itemCount: hoursADay,
                         itemBuilder: (BuildContext context, int index) {
-                          return ExpansionTile(
-                            title: Text(times[0][index + 1][indice]),
-                            children: [
-                              ListTile(
-                                title: Text(
-                                    "Prof: ${times[1][index + 1][indice]}"),
-                              ),
-                              ListTile(
-                                title: Text(
-                                    "Classe: ${times[2][index + 1][indice]}"),
-                              ),
-                            ],
-                          );
+                          // Se l'ora è vuota restituisci solo -
+                          if (timetableData[0][index + 1][indice] == "-") {
+                            return const ListTile(
+                              title: Text("-"),
+                            );
+                          } else {
+                            // Altrimenti la materia
+                            return ExpansionTile(
+                              title: Text(timetableData[0][index + 1][indice]),
+                              children: [
+                                // Il prof
+                                ListTile(
+                                  title: Text(
+                                      "Prof: ${timetableData[1][index + 1][indice]}"),
+                                ),
+                                // E la classe
+                                ListTile(
+                                  title: Text(
+                                      "Classe: ${timetableData[2][index + 1][indice]}"),
+                                ),
+                              ],
+                            );
+                          }
                         })
                   ],
                 );
               },
             ),
+            // E qui da solo c'è il coordinatore di classe
+            // Da sostituire con un'altra lista con il coordinatore e altri dati
             ListTile(
-              title: Text(times[3][0]),
+              title: Text(timetableData[3][0]),
             )
           ],
         ),
       );
     } else {
+      // Se non ci sono dati disponibili metti il messaggio d'errore 'tradotto' e basta
       return Scaffold(
         appBar: bartender,
-        body: const ListTile(
+        body: ListTile(
           title: Text(
-            firstRun,
-            style: TextStyle(fontWeight: FontWeight.normal),
+            translateError(timetableData[0][1]),
+            style: const TextStyle(fontWeight: FontWeight.normal),
           ),
         ),
       );
