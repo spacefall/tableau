@@ -119,7 +119,10 @@ class Tableau extends StatelessWidget {
         darkTheme = darkDynamic.harmonized();
       } else {
         lightTheme = const ColorScheme.light();
-        darkTheme = const ColorScheme.dark();
+        darkTheme = const ColorScheme.dark(
+          background: Colors.black,
+          surface: Colors.black,
+        );
       }
 
 /*       if (UniversalPlatform.isWeb) {

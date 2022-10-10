@@ -36,17 +36,25 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
+  shared_preferences: ^2.0.15
+  universal_platform: ^1.0.0+1
+  connectivity_plus: ^2.3.9
+  dynamic_color: ^1.5.4
+  url_launcher: ^6.1.6
+  validators: ^3.0.0
+  jiffy: ^5.0.0
+  tuple: ^2.0.1
   html: ^0.15.0
   http: ^0.13.5
   pref: ^2.6.0
-  jiffy: ^5.0.0
-  dynamic_color: ^1.5.4
-  shared_preferences: ^2.0.15
-  validators: ^3.0.0
-  url_launcher: ^6.1.6
-  tuple: ^2.0.1
-  universal_platform: ^1.0.0+1
-  connectivity_plus: ^2.3.9
+  
+  
+  
+  
+  
+  
+  
+  
 
 
 dev_dependencies:
