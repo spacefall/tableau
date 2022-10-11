@@ -1,6 +1,6 @@
-# tableau
+# Tableau
 
-A new Flutter project.
+Interfaccia per gli orari dell'IIS Einaudi-Scarpa
 
 ## Getting Started
 

@@ -1,9 +1,15 @@
 body {
-  margin:0;
-  height:100%;
+  margin: 0;
+  height: 100%;
   background: #ffffff;
-  
+
   background-size: 100% 100%;
+}
+
+selector {
+  font-family: -apple-system, BlinkMacSystemFont,
+    "Segoe UI", system-ui, Roboto, Oxygen-Sans, Ubuntu, Cantarell,
+    "Helvetica Neue", sans-serif;
 }
 
 .center {
@@ -16,19 +22,22 @@ body {
 }
 
 .contain {
-  display:block;
-  width:100%; height:100%;
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
 .stretch {
-  display:block;
-  width:100%; height:100%;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .cover {
-  display:block;
-  width:100%; height:100%;
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
@@ -54,10 +63,10 @@ body {
 
 @media (prefers-color-scheme: dark) {
   body {
-    margin:0;
-    height:100%;
+    margin: 0;
+    height: 100%;
     background: #000000;
-    
+
     background-size: 100% 100%;
   }
 }
