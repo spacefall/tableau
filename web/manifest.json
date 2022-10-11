@@ -15,16 +15,28 @@
   ],
   "icons": [
     {
-      "src": "icons/Icon-svg.svg",
-      "sizes": "192x192 348x348 512x512 1024x1024",
+      "src": "icons/Icon-192px.png",
+      "sizes": "192x192",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "icons/Icon-svg.svg",
-      "sizes": "any",
+      "src": "icons/Icon-384px.png",
+      "sizes": "348x348",
       "type": "image/svg+xml",
-      "purpose": "maskable"
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/Icon-512px.png",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/Icon-1024px.png",
+      "sizes": "1024x1024",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
