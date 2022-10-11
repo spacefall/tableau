@@ -7,6 +7,7 @@ import 'package:jiffy/jiffy.dart';
 import 'package:pref/pref.dart';
 import 'package:tuple/tuple.dart';
 import 'package:universal_platform/universal_platform.dart';
+import 'package:recase/recase.dart';
 
 import 'local_timetable.dart';
 import 'get_new_timetable.dart';
@@ -233,7 +234,7 @@ class _TableauMainState extends State<TableauMain> {
                                 // Il prof
                                 ListTile(
                                   title: Text(
-                                      "Prof: ${timetableData[1][index + 1][indice]}"),
+                                      "Prof: ${ReCase(timetableData[1][index + 1][indice]).titleCase}."),
                                 ),
                                 // E la classe
                                 ListTile(
@@ -251,7 +252,8 @@ class _TableauMainState extends State<TableauMain> {
             // E qui da solo c'è il coordinatore di classe
             // Da sostituire con un'altra lista con il coordinatore e altri dati
             ListTile(
-              title: Text(timetableData[3][0]),
+              title: Text(
+                  "Coordinatore: ${ReCase(timetableData[3][0]).titleCase}"),
             )
           ],
         ),

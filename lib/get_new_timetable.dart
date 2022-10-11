@@ -142,7 +142,7 @@ List<String> getExtraData(Document parsedHtml, String url) {
       .getElementsByTagName("font")[2]
       .innerHtml
       .replaceAll("\n", "")
-      .replaceAll("Coord.&nbsp;", "Coordinatore: ")
+      .replaceAll("Coord.&nbsp;", "")
       .replaceAll("&nbsp;", "Nessuno");
 
   return [
