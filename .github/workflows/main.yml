@@ -21,7 +21,7 @@ jobs:
       - name: Building web app
         uses: bluefireteam/flutter-gh-pages@v7
         with:
-          webRenderer: canvaskit
+          #webRenderer: canvaskit
           baseHref: /Tableau/
       - name: Building apk
         run: flutter build apk --target-platform android-arm64,android-arm --split-debug-info=build/tableau_debug_build_info/ --tree-shake-icons
