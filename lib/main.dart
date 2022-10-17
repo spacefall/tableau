@@ -1,4 +1,3 @@
-//import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/services.dart';
@@ -6,20 +5,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jiffy/jiffy.dart';
 import 'package:pref/pref.dart';
 import 'package:tuple/tuple.dart';
-import 'package:universal_platform/universal_platform.dart';
-import 'package:recase/recase.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
 import 'local_timetable.dart';
 import 'get_new_timetable.dart';
 import 'update_link.dart';
 import 'settings.dart';
-import 'others.dart';
+import 'other.dart';
 
 //late final SharedPreferences prefs;
 late List<List> timetableData;
 
-const Color baseColor = Color.fromARGB(255, 0, 153, 47);
-const List<String> dayNames = [
+const dayNames = [
   "Lunedì",
   "Martedì",
   "Mercoledì",
@@ -37,7 +34,9 @@ Future<Tuple2<PrefServiceShared, SharedPreferences>> settingSetup() async {
   return Tuple2<PrefServiceShared, SharedPreferences>(
       await PrefServiceShared.init(
         defaults: {
-          'timetableurl': null,
+          'timetableurl': '',
+          'listViewPadding': false,
+          'hideSubjectSubmenu': false,
         },
       ),
       await SharedPreferences.getInstance());
@@ -54,7 +53,7 @@ void main() async {
   );
 
   // Probabilmente l'if non è necessario ma lo tengo comunque
-  if (UniversalPlatform.isAndroid) {
+  if (!kIsWeb) {
     // Forza il colore della navbar a trasparente
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -71,19 +70,30 @@ Future<List<List>> prepareTT(
   // Se restituisce qualsiasi cosa che non sia "nodata"
   if (ttD[0][0] != "nodata") {
     // Check per vedere che la data sia aggiornata
-    if (!isDateValid(int.parse(ttD[3][2]), int.parse(ttD[3][1]))) {
+    print(
+        "dateinv: ${isDateInvalid(int.parse(ttD[3][2]), int.parse(ttD[3][1]))}");
+    print("shul: ${shouldUpdateLink(prefs)}");
+    if (isDateInvalid(int.parse(ttD[3][2]), int.parse(ttD[3][1])) &&
+        shouldUpdateLink(prefs)) {
       // Se no aggiorna
       String ttUrl = updateLink(ttD[3][3]);
       final ttDNew = await getNewTimetable(ttUrl);
-      // E se non ritorna "nodata", salvala
-      // Questo pezzo di codice ignora completamente se il nuovo link per l'orario è in esistente e quindi 404
-      // Questo if sistema temporaneamente la faccenda fino a quando non lo sistemo per ridurre le richieste al server
+      // Aggiorna lastCheckWeek per evitare continue richieste al server
+      if (prefs.getInt('lastCheckWeek') == Jiffy().week) {
+        await prefs.setInt(
+            'lastCheckWeek',
+            Jiffy().week +
+                1); // so che quando arriva a 52 continuerebbe a caricare il link dell'orario ma si sa che nessuno guarda l'orario l'ultima settimana dell'anno
+      } else {
+        await prefs.setInt('lastCheckWeek', Jiffy().week);
+      }
+      // E se non ritorna "nodata", salvala e restituisci anche ttDNew
       if (ttDNew[0][0] != "nodata") {
         writeTTtoLocal(ttD, prefs);
         return ttDNew;
-      } else {
+      } /* else {
         return ttD;
-      }
+      } */
     }
     // Restituisce la tabella salvata
     return ttD;
@@ -100,6 +110,11 @@ void refreshTimetableData(String url) async {
   if (timetableData[0][0] != "nodata") {
     writeTTtoLocal(timetableData, await SharedPreferences.getInstance());
   }
+}
+
+void reset() async {
+  final prefs = await SharedPreferences.getInstance();
+  prefs.clear();
 }
 
 class Tableau extends StatelessWidget {
@@ -194,6 +209,7 @@ class _TableauMainState extends State<TableauMain> {
       final currentDayOfWeek = Jiffy().day -
           1; // Il -1 è necessario dato che Jiffy parte da 1 e le liste da 0
       final hoursADay = timetableData[0].length - 1;
+      const listPadding = 16.0;
       return Scaffold(
         appBar: bartender,
         body: ListView(
@@ -209,8 +225,12 @@ class _TableauMainState extends State<TableauMain> {
               itemBuilder: (context, indice) {
                 // Espande la lista se il giorno corrispone ad oggi
                 return ExpansionTile(
-                  //initiallyExpanded: (dayNames[indice].toLowerCase() ==
-                  //    Jiffy().format("EEEE")),
+                  tilePadding: PrefService.of(context).get('listViewPadding')
+                      ? const EdgeInsets.only(
+                          left: listPadding,
+                          right: 16,
+                        )
+                      : null,
                   initiallyExpanded: (indice == currentDayOfWeek),
                   title: Text(dayNames[indice]),
                   children: [
@@ -223,26 +243,76 @@ class _TableauMainState extends State<TableauMain> {
                         itemBuilder: (BuildContext context, int index) {
                           // Se l'ora è vuota restituisci solo -
                           if (timetableData[0][index + 1][indice] == "-") {
-                            return const ListTile(
-                              title: Text("-"),
+                            return ListTile(
+                              title: const Text("-"),
+                              // Padding per distinguere meglio la categoria (accessibilità)
+                              contentPadding:
+                                  PrefService.of(context).get('listViewPadding')
+                                      ? const EdgeInsets.only(
+                                          left: listPadding * 2,
+                                          right: 16,
+                                        )
+                                      : null,
                             );
                           } else {
-                            // Altrimenti la materia
-                            return ExpansionTile(
-                              title: Text(timetableData[0][index + 1][indice]),
-                              children: [
-                                // Il prof
-                                ListTile(
-                                  title: Text(
-                                      "Prof: ${ReCase(timetableData[1][index + 1][indice]).titleCase}."),
-                                ),
-                                // E la classe
-                                ListTile(
-                                  title: Text(
-                                      "Classe: ${timetableData[2][index + 1][indice]}"),
-                                ),
-                              ],
-                            );
+                            // Altrimenti la materia (solo materia)
+                            if (PrefService.of(context)
+                                .get('hideSubjectSubmenu')) {
+                              return ListTile(
+                                title:
+                                    Text(timetableData[0][index + 1][indice]),
+                                // Padding per distinguere meglio la categoria (accessibilità)
+                                contentPadding: PrefService.of(context)
+                                        .get('listViewPadding')
+                                    ? const EdgeInsets.only(
+                                        left: listPadding * 2,
+                                        right: 16,
+                                      )
+                                    : null,
+                              );
+                            } else {
+                              // Materia + Prof e classe
+                              return ExpansionTile(
+                                title:
+                                    Text(timetableData[0][index + 1][indice]),
+                                // Padding per distinguere meglio la categoria (accessibilità)
+                                tilePadding: PrefService.of(context)
+                                        .get('listViewPadding')
+                                    ? const EdgeInsets.only(
+                                        left: listPadding * 2,
+                                        right: 16,
+                                      )
+                                    : null,
+                                children: [
+                                  // Il prof
+                                  ListTile(
+                                    title: Text(
+                                        "Prof: ${timetableData[1][index + 1][indice]}"),
+                                    // Padding per distinguere meglio la categoria (accessibilità)
+                                    contentPadding: PrefService.of(context)
+                                            .get('listViewPadding')
+                                        ? const EdgeInsets.only(
+                                            left: listPadding * 3,
+                                            right: 16,
+                                          )
+                                        : null,
+                                  ),
+                                  // E la classe
+                                  ListTile(
+                                    title: Text(
+                                        "Classe: ${timetableData[2][index + 1][indice]}"),
+                                    // Padding per distinguere meglio la categoria (accessibilità)
+                                    contentPadding: PrefService.of(context)
+                                            .get('listViewPadding')
+                                        ? const EdgeInsets.only(
+                                            left: listPadding * 3,
+                                            right: 16,
+                                          )
+                                        : null,
+                                  ),
+                                ],
+                              );
+                            }
                           }
                         })
                   ],
@@ -252,9 +322,14 @@ class _TableauMainState extends State<TableauMain> {
             // E qui da solo c'è il coordinatore di classe
             // Da sostituire con un'altra lista con il coordinatore e altri dati
             ListTile(
-              title: Text(
-                  "Coordinatore: ${ReCase(timetableData[3][0]).titleCase}"),
-            )
+              title: kDebugMode
+                  ? Text(
+                      "Coord: ${timetableData[3][0]} || Reset completo totale totalissimo 110% not scam")
+                  : Text("Coordinatore: ${timetableData[3][0]}"),
+              onTap: () {
+                if (kDebugMode) reset();
+              },
+            ),
           ],
         ),
       );

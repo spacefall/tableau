@@ -11,9 +11,7 @@ Future<List<List>> readTTFromLocal(SharedPreferences prefs) async {
     return [
       [
         "nodata",
-        "Hai probabilmente rotto proprio tutto ;P\nMa seriamente, non dovresti vedere questo, "
-            /*a meno che tu non stia leggendo pure questo commento*/
-            "prova a cancellare i dati e riprovare."
+        "listIndexesORchunk3IsNull",
       ],
     ];
   }

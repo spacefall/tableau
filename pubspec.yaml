@@ -38,7 +38,10 @@ dependencies:
   cupertino_icons: ^1.0.2
   shared_preferences: ^2.0.15
   universal_platform: ^1.0.0+1
-  connectivity_plus: ^2.3.9
+  data_connection_checker:
+    git:
+      url: https://github.com/chornthorn/data_connection_checker.git
+      ref: master
   dynamic_color: ^1.5.4
   url_launcher: ^6.1.6
   validators: ^3.0.0

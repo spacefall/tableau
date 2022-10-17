@@ -2,10 +2,11 @@ import 'package:jiffy/jiffy.dart';
 
 // Restituisce se differenza tra il giorno corrente e la data dell'orario > 6
 // Usata per la funzione sotto a questa e anche per capire se la tabella va cambiata
-bool isDateValid(int month, int day) {
+bool isDateInvalid(int month, int day) {
   Jiffy dateNow = Jiffy();
   Jiffy dateThen = Jiffy([dateNow.year, month, day]);
-  return (dateNow.diff(dateThen, Units.DAY).toInt() < 6);
+  final diff = dateNow.diff(dateThen, Units.DAY).toInt();
+  return (diff > 6 || diff < 0);
 }
 
 // Cambia la data della tabella oraria
@@ -21,7 +22,9 @@ bool isDateValid(int month, int day) {
 
 // Cambia la data della tabella oraria
 String updateLink(String link) {
-  Jiffy dateRN = Jiffy().subtract(days: Jiffy().day - 1);
+  Jiffy dateRN = Jiffy().day == 7
+      ? Jiffy().add(days: 1)
+      : Jiffy().subtract(days: Jiffy().day - 1);
   Jiffy dateRNCorrected = correctDate(dateRN);
   return link.replaceAll("%DATE%",
       "${dateRNCorrected.date.toString()}-${dateRNCorrected.month.toString()}");

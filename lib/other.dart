@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:data_connection_checker/data_connection_checker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:jiffy/jiffy.dart';
 
 String translateError(String error) {
   switch (error) {
@@ -36,8 +38,8 @@ Impostazioni (l'ingranaggio in alto a sinistra) > Link orario scuola.
 
 // Funzione per aprire comodamente un link
 void openWebsite(String url, BuildContext context) async {
-  final Uri uri = Uri.parse(url);
-  if (await Connectivity().checkConnectivity() != ConnectivityResult.none) {
+  final uri = Uri.parse(url);
+  if (await DataConnectionChecker().hasConnection) {
     if (await canLaunchUrl(uri)) {
       await launchUrl(
         uri,
@@ -54,5 +56,31 @@ void openWebsite(String url, BuildContext context) async {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
       content: Text("Non sei connesso ad Internet"),
     ));
+  }
+}
+
+// Decide se il link va cambiato
+bool shouldUpdateLink(SharedPreferences prefs) {
+  final lastCheckWeek = prefs.getInt('lastCheckWeek') ?? 0;
+  final thisWeek = Jiffy().week;
+  print("lstchkwk: $lastCheckWeek");
+  print("thswk: $thisWeek");
+  print("isLCW == tW? ${lastCheckWeek != thisWeek}");
+  print("isLCW == tW+1? ${lastCheckWeek != (thisWeek + 1)}");
+  print(
+      "isLCW == tW/tW+1? ${lastCheckWeek != thisWeek || lastCheckWeek != thisWeek + 1}");
+  print("day: ${Jiffy().day}");
+  if (lastCheckWeek != thisWeek && lastCheckWeek != thisWeek + 1) {
+    // Se il link è di un'altra settimana va cambiato
+    return true;
+  } else {
+    if (Jiffy().day == 7 && lastCheckWeek != thisWeek + 1) {
+      print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaa");
+      // Se non è di un'altra settimana ma è domenica va cambiato
+      return true;
+    } else {
+      // Se il link è di questa settimana e non è domanica non va cambiato
+      return false;
+    }
   }
 }

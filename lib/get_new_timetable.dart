@@ -1,19 +1,28 @@
 import 'package:html/dom.dart';
 import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:data_connection_checker/data_connection_checker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:recase/recase.dart';
 
 // Esegue il parsing dal sito maggiko di Spaggiari, molte altre scuole usano dei pdf messi sullo stesso server quindi non è proprio universale
 // Anche perchè Einaudi-Scarpa usa Untis 2019 e carica l'html sui server di Spaggiari ed entrame le sedi usano 2 formati diversi per il link
 // Quindi altre scuole che hanno più o meno lo stesso setup vanno comunque inserite manualmente in getExtraData per funzionare completamente
 Future<List<List>> getNewTimetable(String url) async {
+  print("Caricando nuovo orario");
+  print(kIsWeb);
   late final http.Response htmlResponse;
-  if (await Connectivity().checkConnectivity() != ConnectivityResult.none) {
-    // Uso un bellissimo proxy CORS perchè i server Spaggiari lo blocca, inoltre giusto per informazione gli orari sono pubblici
-    // Quindi se un'altra scuola usa un setup simile ma richiede password, non lo aggiungo perchè anche se corsproxy.io dice che rispetta il GDPR e non tiene log
-    // Fidarsi è bene, non fidarsi è meglio // <- mettere altre due slash qui non ha alcuna funzione ma mi piaceva
-    htmlResponse =
-        await http.Client().get(Uri.parse("https://corsproxy.io/?$url"));
+  if (await DataConnectionChecker().hasConnection) {
+    if (kIsWeb) {
+      // Uso un bellissimo proxy CORS perchè i server Spaggiari lo blocca, inoltre giusto per informazione gli orari sono pubblici
+      // Quindi se un'altra scuola usa un setup simile ma richiede password, non lo aggiungo perchè anche se corsproxy.io dice che rispetta il GDPR e non tiene log
+      // Fidarsi è bene, non fidarsi è meglio // <- mettere altre due slash qui non ha alcuna funzione ma mi piaceva
+      htmlResponse =
+          await http.Client().get(Uri.parse("https://corsproxy.io/?$url"));
+    } else {
+      // Evitiamo il proxy su app, così è teroicamente più stabile
+      htmlResponse = await http.Client().get(Uri.parse(url));
+    }
   } else {
     return [
       ["nodata", "connecterr"]
@@ -21,13 +30,13 @@ Future<List<List>> getNewTimetable(String url) async {
   }
 
   if (htmlResponse.statusCode == 200) {
-    final Document timetableHTML = parse(htmlResponse.body);
+    final timetableHTML = parse(htmlResponse.body);
     // Dopo il parsing qui sopra, filtra le tabelle nelle tabelle per avere solo materie, classi e prof; dato che ci sono un sacco tabelle su quel sito
-    final List<Element> tables = timetableHTML
+    final tables = timetableHTML
         .getElementsByTagName("table")[1]
         .getElementsByTagName("table");
 
-    int tablesIndex = 0; // Serve a capire a che punto è arrivato il loop
+    var tablesIndex = 0; // Serve a capire a che punto è arrivato il loop
     List<List> finalTimetable = [
       [
         [], // Materia
@@ -43,11 +52,11 @@ Future<List<List>> getNewTimetable(String url) async {
 
     // Per ogni tabella, separa il tag td (quindi il testo contenuto in un tag <font> o <font><b>
     for (int i = 0; i < tables.length; i++) {
-      final List<Element> tdTags = tables[i].getElementsByTagName("td");
+      final tdTags = tables[i].getElementsByTagName("td");
       late final bool
           isLab; // final è più "ottimizzato" di var in questo caso? Cioè viene resettato quando arriva il loop quindi non cambia niente?
       for (int idx = 0; idx < tdTags.length; idx++) {
-        final Element td = tdTags[idx];
+        final td = tdTags[idx];
         // Qui comincia la conversione in liste
         // idx == 0 è sempre una materia
         if (idx == 0) {
@@ -83,16 +92,17 @@ Future<List<List>> getNewTimetable(String url) async {
               .replaceAll("\n", ""));
         } else if (idx == 1) {
           // idx == 1 è sempre un prof (su 2 se è lab)
-          final String tdText = td
-              .getElementsByTagName("b")[0]
-              .innerHtml; // Usato per rendere il codice un po' più leggibile
+          final tdText = ReCase(td.getElementsByTagName("b")[0].innerHtml)
+              .titleCase
+              .replaceAll(
+                  "\n", ""); // Usato per rendere il codice un po' più leggibile
           // Se la materia ha 2 prof (aka è lab) mette i 2 prof assieme, separati da |
           if (isLab) {
             finalTimetable[1][tablesIndex].add(
-                "$tdText | ${tdTags[idx + 1].getElementsByTagName("b")[0].innerHtml}"
+                "$tdText. | ${ReCase(tdTags[idx + 1].getElementsByTagName("b")[0].innerHtml).titleCase}."
                     .replaceAll("\n", ""));
           } else {
-            finalTimetable[1][tablesIndex].add(tdText.replaceAll("\n", ""));
+            finalTimetable[1][tablesIndex].add("$tdText.");
           }
 
           // Se non c'è una classe segnata non occupa una tabella e quindi non viene sengata nella lista, e quindi l'app crasha
@@ -127,23 +137,22 @@ Future<List<List>> getNewTimetable(String url) async {
 // Riempe il 4 "spazio" della lista
 List<String> getExtraData(Document parsedHtml, String url) {
   // Queste 3 variabili dividono il link fino alla data, brutto ma funziona
-  List<String> urlSplitLayer1 = url.split("/");
-  List<String> urlSplitLayer2 =
-      urlSplitLayer1[urlSplitLayer1.length - 3].split("_");
-  final List<String> date =
-      urlSplitLayer2[urlSplitLayer2.length - 1].split("-");
+  var urlSplitLayer1 = url.split("/");
+  var urlSplitLayer2 = urlSplitLayer1[urlSplitLayer1.length - 3].split("_");
+  final date = urlSplitLayer2[urlSplitLayer2.length - 1].split("-");
 
   // Dopo aver assegnato la data, ricrea un link con %DATE% al posto della data, così può essere facilmente cambiata
   urlSplitLayer2[urlSplitLayer2.length - 1] = "%DATE%";
   urlSplitLayer1[urlSplitLayer1.length - 3] = urlSplitLayer2.join("_");
 
   // Prende il coordinatore di classe dalla tabella oraria
-  final String coord = parsedHtml
-      .getElementsByTagName("font")[2]
-      .innerHtml
-      .replaceAll("\n", "")
-      .replaceAll("Coord.&nbsp;", "")
-      .replaceAll("&nbsp;", "Nessuno");
+  final coord = ReCase(parsedHtml
+          .getElementsByTagName("font")[2]
+          .innerHtml
+          .replaceAll("\n", "")
+          .replaceAll("Coord.&nbsp;", "")
+          .replaceAll("&nbsp;", "Nessuno"))
+      .titleCase;
 
   return [
     coord, // Coordinatore di classe
