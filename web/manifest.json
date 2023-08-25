@@ -1,62 +1,35 @@
 {
-  "name": "Tableau",
-  "start_url": ".",
-  "id": "/Tableau/",
-  "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
-  "description": "Interfaccia per gli orari dell'IIS Einaudi-Scarpa",
-  "orientation": "portrait-primary",
-  "scope": "https://spaceox.github.io/Tableau/",
-  "prefer_related_applications": false,
-  "categories": [
-    "education",
-    "utilities"
-  ],
-  "icons": [
-    {
-      "src": "icons/Icon-192px.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/Icon-348px.png",
-      "sizes": "348x348",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/Icon-512px.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/Icon-1024px.png",
-      "sizes": "1024x1024",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/Icon-192px.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "icons/Icon-348px.png",
-      "sizes": "348x348",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "icons/Icon-512px.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "icons/Icon-1024px.png",
-      "sizes": "1024x1024",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ]
+    "name": "tableau",
+    "short_name": "tableau",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#0175C2",
+    "theme_color": "#0175C2",
+    "description": "A new Flutter project.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
 }
