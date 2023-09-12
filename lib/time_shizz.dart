@@ -3,7 +3,6 @@ import "package:timetable/timetable.dart";
 // TODO: cambia nome al file
 // TODO: rendere le variabili funzioni? (così possono essere reinizializzate)
 
-// Finali? pre inizializzate per comodità
 /// Punta al lunedì della settimana corrente
 final DateTime weekStart = DateTime.now()
     .subtract(Duration(days: DateTime.now().weekday - DateTime.monday))

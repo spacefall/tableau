@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:tableau/table_classes.dart";
 import "package:tableau/time_shizz.dart";
 import "package:timetable/timetable.dart";
 
@@ -56,14 +57,47 @@ const Map<String, Map<int, Map<String, List<int>>>> orariLezioni = {
     },
   },
 };
-
+// TODO: cambia nome
 List<BasicEvent> createEventsFromMap(
-  Map<int, Map<int, Map<String, String>>> timetableMap,
+  Timetable tt,
   Color bgColor,
 ) {
   final List<BasicEvent> eventList = [];
 
-  timetableMap.forEach((weekday, hourMap) {
+  tt.table.forEach((weekday, materie) {
+    final Map<int, Map<String, List<int>>> orarioMateria = switch (weekday) {
+      1 || 4 => orariLezioni["ridotto"]!,
+      _ => orariLezioni["normale"]!,
+    };
+
+    for (final (index, slot) in materie.indexed) {
+      if (slot.materia.isEmpty) continue;
+
+      eventList.add(
+        BasicEvent(
+          id: weekday * 10 + index,
+          title: slot.materia,
+          backgroundColor: bgColor,
+          start: weekStart.add(
+            Duration(
+              days: weekday,
+              hours: orarioMateria[index]!["inizio"]![0],
+              minutes: orarioMateria[index]!["inizio"]![1],
+            ),
+          ),
+          end: weekStart.add(
+            Duration(
+              days: weekday,
+              hours: orarioMateria[index]!["fine"]![0],
+              minutes: orarioMateria[index]!["fine"]![1],
+            ),
+          ),
+        ),
+      );
+    }
+  });
+
+  /* timetableMap.forEach((weekday, hourMap) {
     final Map<int, Map<String, List<int>>> orario = switch (weekday) {
       1 || 4 => orariLezioni["ridotto"]!,
       _ => orariLezioni["normale"]!,
@@ -93,6 +127,6 @@ List<BasicEvent> createEventsFromMap(
         );
       }
     });
-  });
+  }); */
   return eventList;
 }

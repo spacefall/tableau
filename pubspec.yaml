@@ -36,6 +36,9 @@ dependencies:
   html: ^0.15.4
   http: ^1.1.0
   intl: ^0.18.1
+  pref: ^2.7.1
+  shared_preferences: ^2.2.1
+  string_validator: ^1.0.0
   timetable: ^1.0.0-alpha.13
 
 dev_dependencies:

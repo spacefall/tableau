@@ -1,4 +1,4 @@
-package com.example.tableau
+package com.spacefall.tableau
 
 import io.flutter.embedding.android.FlutterActivity
 

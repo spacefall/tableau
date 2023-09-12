@@ -1,10 +1,33 @@
 import "package:dynamic_color/dynamic_color.dart";
 import "package:flutter/material.dart";
+import "package:flutter/services.dart";
 import "package:flutter_localizations/flutter_localizations.dart";
+import "package:pref/pref.dart";
 import "package:tableau/home.dart";
 import "package:timetable/timetable.dart";
 
-void main() => runApp(const Tableau());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final service = await PrefServiceShared.init(
+    defaults: {
+      "ttUrl": "",
+    },
+  );
+  //runApp(const Tableau());
+  runApp(
+    PrefService(
+      service: service,
+      child: const Tableau(),
+    ),
+  );
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      systemNavigationBarColor: Colors.transparent, //black.withOpacity(0),
+    ),
+  );
+}
 
 class Tableau extends StatelessWidget {
   const Tableau({super.key});
@@ -55,7 +78,10 @@ class Tableau extends StatelessWidget {
             //scaffoldBackgroundColor: darkTheme.background,
             useMaterial3: true,
           ),
-          home: const TableauHome(title: appTitle),
+          home: TableauHome(
+            title: appTitle,
+            ttUrl: PrefService.of(context).get("ttUrl") as String,
+          ),
         );
       },
     );
