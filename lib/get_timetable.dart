@@ -82,16 +82,16 @@ Timetable parseTimetable(String html) {
 
         //isLab = cellText.endsWith(". ");
 
-        cellText.isNotEmpty
-            ? step++
-            : weekday == 5
-                ? weekday = firstweekday
-                : weekday++;
+        if (cellText.isNotEmpty) {
+          step++;
+        } else {
+          timetableMap.add(weekday, ttSlot);
+          weekday == 5 ? weekday = firstweekday : weekday++;
+        }
 
       // Professori
       case 1:
         //isLab ? ttSlot!.prof1 = cellText : ttSlot!.prof0 = cellText;
-
 /*         final bool isNextClass = cells.length != index + 1
             ? cells[index + 1].querySelector("font")?.attributes["size"] == "1"
             : false; */
@@ -99,7 +99,8 @@ Timetable parseTimetable(String html) {
             cells[index + 1].querySelector("font")?.attributes["size"] == "1";
 
         final bool isNextProf = cells.length != index + 1 &&
-            cells[index + 1].text == cells[index + 1].text.toUpperCase();
+            cells[index + 1].text == cells[index + 1].text.toUpperCase() &&
+            !cells[index + 1].attributes.containsKey("align");
 
         if (isNextClass) {
           ttSlot!.prof0 = cellText;
@@ -108,8 +109,9 @@ Timetable parseTimetable(String html) {
           if (isNextProf) {
             ttSlot!.prof1 = cellText;
           } else {
+            ttSlot!.prof0 = cellText;
             step = 0;
-            timetableMap.add(weekday, ttSlot!);
+            timetableMap.add(weekday, ttSlot);
             weekday == 5 ? weekday = firstweekday : weekday++;
           }
         }

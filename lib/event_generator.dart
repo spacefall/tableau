@@ -76,7 +76,8 @@ List<BasicEvent> createEventsFromMap(
       eventList.add(
         BasicEvent(
           id: weekday * 10 + index,
-          title: slot.materia,
+          title:
+              "${slot.materia}\n${slot.prof0}\n${slot.prof1 ?? ""}\n${slot.classe ?? "Classe sconosciuta"}",
           backgroundColor: bgColor,
           start: weekStart.add(
             Duration(
