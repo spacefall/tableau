@@ -42,9 +42,10 @@ class _TableauHomeState extends State<TableauHome> {
   // TODO: refactor necessario tipo ieri
   void setTimetablePage(String ttUrl) {
     _timetablePage = prepareEvents(ttUrl).then(
-      (value) => createEventsFromMap(
+      (value) => createEventsFromTimetable(
         value,
         Theme.of(context).colorScheme.inversePrimary,
+        false,
       ),
     );
     isTTInitialized = true;
@@ -140,17 +141,19 @@ class _TableauHomeState extends State<TableauHome> {
                       snapshot.data!,
                     ),
                     eventBuilder: (context, event) => BasicEventWidget(event),
+                    theme: TimetableThemeData(
+                      context,
+                      dateEventsStyleProvider: (date) {
+                        return DateEventsStyle(context, date,
+                            enableStacking: true, stackedEventSpacing: 0);
+                      },
+                    ),
                     child: RecurringMultiDateTimetable<BasicEvent>(),
                   );
                   // FIXME: Se non è tutto ok ed il futuro restituisce un errore
-                  /* {
-              
-            } */
                   // Mentre si sta caricando l'orario
                 } else {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
+                  return const LinearProgressIndicator();
                 }
               },
             )

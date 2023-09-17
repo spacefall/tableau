@@ -1,5 +1,7 @@
 import "dart:convert";
+import "dart:io";
 
+import "package:flutter/foundation.dart";
 import "package:html/dom.dart";
 import "package:html/parser.dart" as parser;
 import "package:http/http.dart" as http;
@@ -26,6 +28,7 @@ Future<Timetable> prepareEvents(String url) async {
   }
 }
 
+// TODO: error handling
 /// Restituisce il body dell'html dall'url richiesto
 Future<String> getHtmlBody(String url) async {
   try {
@@ -66,10 +69,10 @@ Timetable parseTimetable(String html) {
       firstweekday; // Indica il giorno della settimana in cui scrivere ttSlot
   int step =
       0; // Indica qual è il prossimo step (ovvero quale parte viene salvata (materia/prof/classe))
-  //bool isLab = false; // Indica se è possibile che la materia è di laboratorio (e quindi ha 2 professori)
   Timeslot? ttSlot; // Tiene il timeslot che viene costruito nel loop
 
   for (final (index, element) in cells.indexed) {
+    // Salta i numeri delle ore e i giorni della settimana
     if (element.attributes.containsKey("align") || index < (7 - firstweekday)) {
       continue;
     }
@@ -80,8 +83,6 @@ Timetable parseTimetable(String html) {
       case 0:
         ttSlot = Timeslot(materia: cellText);
 
-        //isLab = cellText.endsWith(". ");
-
         if (cellText.isNotEmpty) {
           step++;
         } else {
@@ -91,16 +92,21 @@ Timetable parseTimetable(String html) {
 
       // Professori
       case 1:
-        //isLab ? ttSlot!.prof1 = cellText : ttSlot!.prof0 = cellText;
-/*         final bool isNextClass = cells.length != index + 1
-            ? cells[index + 1].querySelector("font")?.attributes["size"] == "1"
-            : false; */
-        final bool isNextClass = cells.length != index + 1 &&
-            cells[index + 1].querySelector("font")?.attributes["size"] == "1";
+        late final bool isNextProf;
+        late final bool isNextClass;
 
-        final bool isNextProf = cells.length != index + 1 &&
-            cells[index + 1].text == cells[index + 1].text.toUpperCase() &&
-            !cells[index + 1].attributes.containsKey("align");
+        if (cells.length != index + 1) {
+          final nextCell = cells[index + 1];
+
+          isNextClass =
+              nextCell.querySelector("font")?.attributes["size"] == "1";
+
+          isNextProf = nextCell.text == nextCell.text.toUpperCase() &&
+              !nextCell.attributes.containsKey("align");
+        } else {
+          isNextClass = false;
+          isNextProf = false;
+        }
 
         if (isNextClass) {
           ttSlot!.prof0 = cellText;
@@ -115,19 +121,6 @@ Timetable parseTimetable(String html) {
             weekday == 5 ? weekday = firstweekday : weekday++;
           }
         }
-      /* switch ((isLab, isNextClass)) {
-          case (true, true):
-          case (false, true): // || (true, true):
-            ttSlot!.prof0 = cellText;
-            step++;
-          case (true, false):
-            ttSlot!.prof1 = cellText;
-            isLab = false;
-          case (false, false):
-            step = 0;
-            timetableMap.add(weekday, ttSlot!);
-            weekday == 5 ? weekday = firstweekday : weekday++;
-        } */
 
       // Classe
       case 2:
