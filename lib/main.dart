@@ -12,6 +12,7 @@ void main() async {
   final service = await PrefServiceShared.init(
     defaults: {
       "ttUrl": "",
+      "alwaysUseStandardTime": false,
     },
   );
   //runApp(const Tableau());
