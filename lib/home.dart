@@ -5,6 +5,7 @@ import "package:shared_preferences/shared_preferences.dart";
 import "package:tableau/event_generator.dart";
 import "package:tableau/get_timetable.dart";
 import "package:tableau/settings.dart";
+import "package:tableau/table_classes.dart";
 import "package:tableau/time_shizz.dart";
 import "package:timetable/timetable.dart";
 
@@ -23,14 +24,21 @@ class _TableauHomeState extends State<TableauHome> {
   bool? isExtendedView;
 
   // Lista di eventi della tabella
-  late Future<List<BasicEvent>> _timetablePage;
+  late Future<Timetable> _timetablePage;
 
-  //
-  late bool isTTInitialized;
+  // Serve a determinare se esiste già un url per l'orario o no
+  late bool isTTUrlSet;
+
+  // Serve a determinare se la tabella è già stata creata (e quindi non deve essere rigenerata)
+  bool isTTLoaded = false;
+
+  // Tiene gli eventi, così possono essere rigenerati senza dover riaprire l'app
+  List<BasicEvent> timetableEvents = [];
 
   // Questo DateController viene modificato a runtime, per rendere l'app più reattiva
   final _dateController = DateController();
 
+  // Forza la visuale con uno zoom massimo di 2h e un range che va dalle 7 alle 15
   final _timeController = TimeController(
     minDuration: const Duration(hours: 2), // Max zoom
     maxRange: TimeRange(
@@ -39,24 +47,29 @@ class _TableauHomeState extends State<TableauHome> {
     ), // Max display
   );
 
-  // TODO: refactor necessario tipo ieri
   void setTimetablePage(String ttUrl) {
-    _timetablePage = prepareEvents(ttUrl).then(
-      (value) => createEventsFromTimetable(
-        value,
-        Theme.of(context).colorScheme.inversePrimary,
-        false,
-      ),
+    print("reloaded tt");
+    _timetablePage = prepareEvents(
+      ttUrl,
     );
-    isTTInitialized = true;
+    isTTUrlSet = true;
+    isTTLoaded = true;
   }
 
-  void setTTPageFromSettings() {
-    setState(() {
-      setTimetablePage(PrefService.of(context).get("ttUrl") as String);
-    });
+  void refresh({bool deepRefresh = false}) {
+    timetableEvents = [];
+    if (deepRefresh) {
+      isTTLoaded = false;
+      isTTUrlSet = true;
+    }
+    setState(() {});
+/*     setState(() {
+      timetableEvents = [];
+
+    }); */
   }
 
+  // fa il dispose dei controller
   @override
   void dispose() {
     _timeController.dispose();
@@ -64,17 +77,21 @@ class _TableauHomeState extends State<TableauHome> {
     super.dispose();
   }
 
-  // Imposta _timetablePage al posto di farlo nel futureBuilder
-  // così non deve ricaricare la lista ogni volta che viene ricostruito il widget
+  // Imposta _timetablePage al posto di farlo nel futureBuilder così non deve ricaricare la lista ogni volta che viene ricostruito il widget
   @override
   void initState() {
-    isTTInitialized = widget.ttUrl != "";
-    if (isTTInitialized) setTimetablePage(widget.ttUrl);
+    // TODO: capisco l'intento però si può fare di meglio
+    isTTUrlSet = widget.ttUrl.isNotEmpty;
+
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isTTUrlSet && timetableEvents.isEmpty && !isTTLoaded) {
+      setTimetablePage(widget.ttUrl);
+    }
+    // Controlla se si deve usare la visualizzazione a 3 o 6 giorni
     final bool isLargeWindow = MediaQuery.of(context).size.width >= 800;
     isExtendedView ??= !isLargeWindow;
 
@@ -100,9 +117,9 @@ class _TableauHomeState extends State<TableauHome> {
       _dateController.jumpTo(weekHalf);
     }
 
+    // Il resto della schermata principale
     return Scaffold(
       appBar: AppBar(
-        //backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
         actions: [
           if (kDebugMode)
@@ -118,7 +135,7 @@ class _TableauHomeState extends State<TableauHome> {
               context,
               MaterialPageRoute(
                 builder: (context) => TableauSettings(
-                  setTTPage: setTTPageFromSettings,
+                  refreshParent: refresh,
                 ),
               ),
             ),
@@ -128,24 +145,35 @@ class _TableauHomeState extends State<TableauHome> {
       ),
       // Carica _timetablePage (la tabella di eventi che estrapola dall'html) in modo asincrono
       // e quando è pronto sostituisce il widget di caricamento con la tabella
-      body: isTTInitialized
+      body: isTTUrlSet
           ? FutureBuilder(
               future: _timetablePage,
               builder: (context, snapshot) {
                 // Se tutto ok ed stato caricato l'orario
                 if (snapshot.connectionState == ConnectionState.done) {
+                  if (timetableEvents.isEmpty) {
+                    timetableEvents = createEventsFromTimetable(
+                      snapshot.data!,
+                      Theme.of(context).colorScheme.inversePrimary,
+                      PrefService.of(context).get("alwaysUseStandardTime")
+                          as bool,
+                    );
+                    print("rebuilt list");
+                  }
                   return TimetableConfig<BasicEvent>(
                     dateController: _dateController,
                     timeController: _timeController,
-                    eventProvider: eventProviderFromFixedList(
-                      snapshot.data!,
-                    ),
+                    eventProvider: eventProviderFromFixedList(timetableEvents),
                     eventBuilder: (context, event) => BasicEventWidget(event),
                     theme: TimetableThemeData(
                       context,
                       dateEventsStyleProvider: (date) {
-                        return DateEventsStyle(context, date,
-                            enableStacking: true, stackedEventSpacing: 0);
+                        return DateEventsStyle(
+                          context,
+                          date,
+                          enableStacking: true,
+                          stackedEventSpacing: 0,
+                        );
                       },
                     ),
                     child: RecurringMultiDateTimetable<BasicEvent>(),
