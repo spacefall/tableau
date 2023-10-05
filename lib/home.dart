@@ -1,3 +1,4 @@
+import "package:dynamic_color/dynamic_color.dart";
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:pref/pref.dart";
@@ -155,6 +156,7 @@ class _TableauHomeState extends State<TableauHome> {
                     timetableEvents = createEventsFromTimetable(
                       snapshot.data!,
                       Theme.of(context).colorScheme.inversePrimary,
+                      Theme.of(context).colorScheme.primary,
                       PrefService.of(context).get("alwaysUseStandardTime")
                           as bool,
                     );

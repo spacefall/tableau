@@ -1,7 +1,4 @@
 import "dart:convert";
-import "dart:io";
-
-import "package:flutter/foundation.dart";
 import "package:html/dom.dart";
 import "package:html/parser.dart" as parser;
 import "package:http/http.dart" as http;

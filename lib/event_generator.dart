@@ -7,6 +7,7 @@ import "package:timetable/timetable.dart";
 List<BasicEvent> createEventsFromTimetable(
   Timetable tt,
   Color bgColor,
+  Color bgColorAlt,
   bool alwaysUseStandardTime,
 ) {
   final List<BasicEvent> eventList = [];
@@ -19,27 +20,29 @@ List<BasicEvent> createEventsFromTimetable(
             _ => orariLezioni["normale"]!,
           };
 
-    eventList.add(
-      BasicEvent(
-        id: 99 * 10 + weekday,
-        title: "Intervallo",
-        backgroundColor: Colors.red,
-        start: weekStart.add(
-          Duration(
-            days: weekday,
-            hours: orarioMateria[99]!["inizio"]![0],
-            minutes: orarioMateria[99]!["inizio"]![1],
+    if (tt.table[weekday]!.isNotEmpty) {
+      eventList.add(
+        BasicEvent(
+          id: 99 * 10 + weekday,
+          title: "Intervallo",
+          backgroundColor: bgColorAlt,
+          start: weekStart.add(
+            Duration(
+              days: weekday,
+              hours: orarioMateria[99]!["inizio"]![0],
+              minutes: orarioMateria[99]!["inizio"]![1],
+            ),
+          ),
+          end: weekStart.add(
+            Duration(
+              days: weekday,
+              hours: orarioMateria[99]!["fine"]![0],
+              minutes: orarioMateria[99]!["fine"]![1],
+            ),
           ),
         ),
-        end: weekStart.add(
-          Duration(
-            days: weekday,
-            hours: orarioMateria[99]!["fine"]![0],
-            minutes: orarioMateria[99]!["fine"]![1],
-          ),
-        ),
-      ),
-    );
+      );
+    }
 
     for (final (index, slot) in materie.indexed) {
       if (slot.materia.isEmpty) continue;
